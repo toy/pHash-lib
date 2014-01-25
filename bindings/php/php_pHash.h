@@ -12,7 +12,7 @@
    +----------------------------------------------------------------------+
 */
 
-/* $ Id: $ */ 
+/* $ Id: $ */
 
 #ifndef PHP_PHASH_H
 #define PHP_PHASH_H
@@ -28,7 +28,7 @@ extern "C" {
 #include <php.h>
 
 #ifdef HAVE_PHASH
-#define PHP_PHASH_VERSION "0.9.2"
+#define PHP_PHASH_VERSION "0.9.6"
 
 
 #include <php_ini.h>
@@ -36,7 +36,7 @@ extern "C" {
 #include <ext/standard/info.h>
 #include <Zend/zend_extensions.h>
 #ifdef  __cplusplus
-} // extern "C" 
+} // extern "C"
 #endif
 #include <pHash.h>
 #include <audiophash.h>
@@ -171,7 +171,7 @@ ZEND_END_ARG_INFO()
 #endif
 
 #ifdef  __cplusplus
-} // extern "C" 
+} // extern "C"
 #endif
 
 #endif /* PHP_HAVE_PHASH */

@@ -12,7 +12,7 @@
    +----------------------------------------------------------------------+
 */
 
-/* $ Id: $ */ 
+/* $ Id: $ */
 
 #include "php_pHash.h"
 
@@ -36,12 +36,14 @@ struct ph_text_hash
 
 /* {{{ phpinfo logo definitions */
 
+#if PHP_VERSION_ID < 50500
 #include "php_logos.h"
+#endif
 
 
 static unsigned char pHash_logo[] = {
 #include "pHash_logos.h"
-}; 
+};
 /* }}} */
 
 /* {{{ Resource destructors */
@@ -125,12 +127,12 @@ zend_module_entry pHash_module_entry = {
 	STANDARD_MODULE_HEADER,
 	"pHash",
 	pHash_functions,
-	PHP_MINIT(pHash),     /* Replace with NULL if there is nothing to do at php startup   */ 
+	PHP_MINIT(pHash),     /* Replace with NULL if there is nothing to do at php startup   */
 	PHP_MSHUTDOWN(pHash), /* Replace with NULL if there is nothing to do at php shutdown  */
 	PHP_RINIT(pHash),     /* Replace with NULL if there is nothing to do at request start */
 	PHP_RSHUTDOWN(pHash), /* Replace with NULL if there is nothing to do at request end   */
 	PHP_MINFO(pHash),
-	PHP_PHASH_VERSION, 
+	PHP_PHASH_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
 /* }}} */
@@ -145,14 +147,16 @@ ZEND_GET_MODULE(pHash)
 /* {{{ PHP_MINIT_FUNCTION */
 PHP_MINIT_FUNCTION(pHash)
 {
+#if PHP_VERSION_ID < 50500
 	php_register_info_logo("PHASH_LOGO_ID", "", pHash_logo, 49651);
-	le_ph_video_hash = zend_register_list_destructors_ex(ph_video_hash_dtor, 
+#endif
+	le_ph_video_hash = zend_register_list_destructors_ex(ph_video_hash_dtor,
 						   NULL, "ph_video_hash", module_number);
-	le_ph_image_hash = zend_register_list_destructors_ex(ph_image_hash_dtor, 
+	le_ph_image_hash = zend_register_list_destructors_ex(ph_image_hash_dtor,
 						   NULL, "ph_image_hash", module_number);
-	le_ph_audio_hash = zend_register_list_destructors_ex(ph_audio_hash_dtor, 
+	le_ph_audio_hash = zend_register_list_destructors_ex(ph_audio_hash_dtor,
 						   NULL, "ph_audio_hash", module_number);
-	le_ph_txt_hash = zend_register_list_destructors_ex(ph_txt_hash_dtor, 
+	le_ph_txt_hash = zend_register_list_destructors_ex(ph_txt_hash_dtor,
 						   NULL, "ph_txt_hash", module_number);
 
 	/* add your stuff here */
@@ -165,7 +169,9 @@ PHP_MINIT_FUNCTION(pHash)
 /* {{{ PHP_MSHUTDOWN_FUNCTION */
 PHP_MSHUTDOWN_FUNCTION(pHash)
 {
+#if PHP_VERSION_ID < 50500
 	php_unregister_info_logo("PHASH_LOGO_ID");
+#endif
 
 	/* add your stuff here */
 
@@ -202,7 +208,7 @@ PHP_MINFO_FUNCTION(pHash)
 	php_printf("<img src='");
 	if (SG(request_info).request_uri) {
 		php_printf("%s", (SG(request_info).request_uri));
-	}   
+	}
 	php_printf("?=%s", "PHASH_LOGO_ID");
 	php_printf("' align='right' alt='image' border='0'>\n");
 
@@ -244,7 +250,7 @@ PHP_FUNCTION(ph_dct_videohash)
 		p->hash = video_hash;
 		p->len = len;
 		return_res = p;
-	
+
 	}
 	else
 		RETURN_FALSE;
@@ -256,7 +262,7 @@ PHP_FUNCTION(ph_dct_videohash)
 #endif /* HAVE_VIDEO_HASH */
 
 #if HAVE_IMAGE_HASH
-/* {{{ proto resource ph_image_hash ph_dct_imagehash(string file)
+/* {{{ proto long ph_image_hash ph_dct_imagehash(string file)
   pHash DCT image hash */
 PHP_FUNCTION(ph_dct_imagehash)
 {
@@ -265,6 +271,9 @@ PHP_FUNCTION(ph_dct_imagehash)
 
 	const char * file = NULL;
 	int file_len = 0;
+	char buffer [64];
+	int n;
+	char *str;
 
 
 
@@ -280,9 +289,12 @@ PHP_FUNCTION(ph_dct_imagehash)
 		RETURN_FALSE;
 	}
 	else
-		return_res = hash;
-
-	return_res_id = ZEND_REGISTER_RESOURCE(return_value, return_res, le_ph_image_hash);
+	{
+		n = sprintf(buffer, "%016llx", *hash);
+		str = estrdup(buffer);
+		free(hash);
+		RETURN_STRING(str, 0);
+	}
 }
 /* }}} ph_dct_imagehash */
 
@@ -375,25 +387,28 @@ PHP_FUNCTION(ph_image_dist)
 {
 	zval * h1_res = NULL;
 	int h1_resid = -1;
-	ulong64 * h1;
 	zval * h2_res = NULL;
 	int h2_resid = -1;
-	ulong64 * h2;
 
+	char *num1;
+	int num1_len;
+	char *num2;
+	int num2_len;
 
-
-
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rr", &h1_res, &h2_res) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &num1, &num1_len, &num2, &num2_len) == FAILURE) {
 		return;
 	}
-	ZEND_FETCH_RESOURCE(h1, ulong64 *, &h1_res, h1_resid, "ph_image_hash", le_ph_image_hash);
-	ZEND_FETCH_RESOURCE(h2, ulong64 *, &h2_res, h2_resid, "ph_image_hash", le_ph_image_hash);
 
+	ulong64 h1;
+	ulong64 h2;
+
+	h1 = strtoull(num1, NULL, 16);
+	h2 = strtoull(num2, NULL, 16);
 
 
 	if(h1 && h2)
 	{
-		int dist = ph_hamming_distance(*h1, *h2);
+		int dist = ph_hamming_distance(h1, h2);
 		RETURN_DOUBLE(dist);
 	}
 	else
@@ -440,7 +455,7 @@ PHP_FUNCTION(ph_video_dist)
 #endif /* HAVE_VIDEO_HASH */
 
 #if HAVE_AUDIO_HASH
-/* {{{ proto float ph_audio_dist(resource ph_audio_hash h1,resource ph_audio_hash h2, 
+/* {{{ proto float ph_audio_dist(resource ph_audio_hash h1,resource ph_audio_hash h2,
 		int block_size=256, float thresh=0.30)
   pHash audio distance. */
 PHP_FUNCTION(ph_audio_dist)
@@ -468,7 +483,7 @@ PHP_FUNCTION(ph_audio_dist)
 	if(h1 && h2)
 	{
 		int Nc;
-		double *cs = ph_audio_distance_ber(h1->hash, h1->len, h2->hash, h2->len, 
+		double *cs = ph_audio_distance_ber(h1->hash, h1->len, h2->hash, h2->len,
 				thresh, block_size, Nc);
 		if(cs)
 		{
